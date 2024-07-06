@@ -1,0 +1,83 @@
+---
+- name: Instalação do APP Wordpress
+  become: yes
+  hosts: app01
+
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: Instalar pré-requisitos
+      apt: name=aptitude update_cache=yes state=latest force_apt_get=yes
+      tags: [ system ]
+
+    - name: Instalar o LAMP 
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: [ 'apache2', 'php', 'php-mysql', 'libapache2-mod-php' ]
+      tags: [ system ]
+
+    - name: Instalar as extensões do PHP
+      apt: name={{ item }} update_cache=yes state=latest
+      loop: "{{ php_modulos }}"
+      tags: [ system ]
+
+    - name: Download e instalação do Wordpress
+      unarchive:
+        src: https://wordpress.org/latest.tar.gz
+        dest: "/var/www/html"
+        remote_src: yes
+        creates: "/var/www/html/wordpress"
+      tags: [ wordpress ]
+
+    - name: Setar o proprietário
+      file:
+        path: "/var/www/html/wordpress"
+        state: directory
+        recurse: yes
+        owner: www-data
+        group: www-data
+      tags: [ wordpress ]
+
+    - name: Setar permissões nos diretórios
+      shell: "/usr/bin/find /var/www/html/wordpress/ -type d -exec chmod 750 {} \\;"
+      tags: [ wordpress ]
+
+    - name: Setar permissões nos arquivos
+      shell: "/usr/bin/find /var/www/html/wordpress/ -type f -exec chmod 640 {} \\;"
+      tags: [ wordpress ]
+
+    - name: Setar o arquivos de configuração do wordpress o wp-config
+      template:
+        src: "files/wp-config.php.j2"
+        dest: "/var/www/html/wordpress/wp-config.php"
+      tags: [ wordpress ]
+
+  handlers:
+    - name: Reload Apache
+      service:
+        name: apache2
+        state: reloaded
+
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
